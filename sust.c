@@ -17,121 +17,185 @@ struct habit {
 
 struct record {
 	struct tm date;
-	char *task;
+	int habit;
 	char complete; /* y, n, or s */
 	struct record *next;
 };
 
-void init_today(void);
-int is_comment(char *line);
-struct tm *parse_date(char* date, struct tm *target);
-struct record *parse_line(char* line);
-int print_date_today(void);
-int read_log(FILE* logfile);
+void init_tm(void);
+int is_comment(const char *line);
+int split_log_line(char *line, char *fields[3]);
 
 /* user settings */
 #include "config.h"
 
 /* global variables */
-struct tm tm_today = {0};
-struct record records[LENGTH(habits)];
+/* see time.h(0p) for info on struct tm */
+struct tm _today = {0}; /* today's date */
+struct tm _cutoff = {0}; /* ignore entries older than this */
+struct record* records[LENGTH(habits)] = {0};
+int debug = 0;
 
-void init_today(void)
+void init_tm(void)
 {
 	time_t now = time(NULL);
-	localtime_r(&now, &tm_today);
+	localtime_r(&now, &_today);
+
+	/* set cutoff to first of the farthest month in the past */
+	_cutoff.tm_mon = _today.tm_mon;
+	_cutoff.tm_year = _today.tm_year;
+	_cutoff.tm_mday = 1;
+	_cutoff.tm_mon -= (months - 1);
+	/* normalise (month 0 = december last year) */
+	mktime(&_cutoff);
 }
 
-int is_comment(char *line)
+void insert_record(struct record *new)
 {
-	/* NULL, (almost) empty line, or starts with '#'. */
-	return (!line || strlen(line) <= 2 || line[0] == '#');
+	struct record *found;
+	new->next = NULL;
+
+	if (!records[new->habit]) {
+		records[new->habit] = new;
+	} else {
+		found = records[new->habit];
+		while (found->next != NULL) {
+			found = found->next;
+		}
+		found->next = new;
+	}
 }
 
-int print_date_today(void) {
-	char* buf = malloc(sizeof(char) * BUFSIZE);
-
-	strftime(buf, BUFSIZE, "%F", &tm_today);
-	printf("%s\n", buf);
-	free(buf);
-	return 0;
-}
-
-struct tm *parse_date(char *date, struct tm *target)
+int is_comment(const char *line)
 {
-	if (!strptime(date, "%F", target)) {
+	/* NULL, empty line, or starts with '#'. */
+	return (!line || line[0] == '#' || strcspn(line, "\n") == 0 );
+}
+
+int is_too_old(struct record *record)
+{
+	if (debug) {
+		fprintf(stderr, "%i %i %i %i %i %i %i %i ",
+				record->date.tm_sec,
+				record->date.tm_min,
+				record->date.tm_hour,
+				record->date.tm_mon,
+				record->date.tm_year,
+				record->date.tm_wday,
+				record->date.tm_yday,
+				record->date.tm_isdst);
+		fprintf(stderr, "Cutoff: %li record: %li\n",
+				mktime(&_cutoff), mktime(&record->date));
+	}
+	return (mktime(&_cutoff) > mktime(&record->date));
+}
+
+struct record *parse_line(char *line, struct record *out)
+{
+	char *fields[3];
+
+	split_log_line(line, fields);
+	/* strptime doesn't initialise struct tm */
+	out->date = _cutoff;
+	if (!strptime(fields[0], "%F", &out->date)) {
 		goto fail;
 	}
-	return target;
+
+	out->habit = -1;
+	for (long unsigned int i = 0; i < LENGTH(habits); i++) {
+		/* iterate through habits */
+		if (strcmp(habits[i].task, fields[1]) == 0) {
+			out->habit = i;
+			break;
+		}
+	}
+
+	out->complete = fields[2][0];
+	if (out->complete != 'y' && out->complete != 'n'
+			&& out->complete != 's') {
+		goto fail;
+	}
+
+	return out;
 fail:
+	/* something was malformed/this isn't a valid line */
 	return NULL;
 }
 
-struct record *parse_line(char *line)
+int parse_log(FILE *log)
 {
-	char *tmp, *datebuf, *taskbuf, *compbuf = NULL;
-	struct record *record = malloc(sizeof(struct record));
-	struct tm *datetm = malloc(sizeof(struct tm));
-
-	if (!(datebuf = strtok_r(line, "\t", &tmp))
-			|| !(taskbuf = strtok_r(NULL, "\t", &tmp))
-			|| !(compbuf = strtok_r(NULL, "\t", &tmp))) {
-		/* TODO: error msg */
-		goto fail;
-	}
-
-	if (!parse_date(datebuf, &record->date)) {
-		/* TODO: error msg */
-		goto fail;
-	}
-	/* TODO: error checking */
-	record->task = malloc(sizeof(char) * (strlen(taskbuf) + 1));
-	record->complete = compbuf[0];
-	return record;
-fail:
-	/* Line is invalid. */
-	free(record);
-	free(datetm);
-	return NULL;
-}
-
-int print_log()
-{
-	/* Let's do this... */
-	/* Need to print:
-	 *  x current date 
-	 *  ~ X axis - dont bother for now
-	 *  - heatmap
-	 *  - one line for each habit */
-
-	print_date_today();
-
-	return 0;
-}
-
-int read_log(FILE* logfile)
-{
-	int lineno = 0;
+	/* initialize records array */
 	char *buf = malloc(sizeof(char) * BUFSIZE);
-	struct record *currec;
+	int lineno = 0;
+	struct record *current = malloc(sizeof(struct record));
 
-	while (fgets(buf, BUFSIZE, logfile) && !feof(logfile)) {
-		/* do smth */
+	while (fgets(buf, BUFSIZE, log) && !feof(log)) {
+		/* parse */
 		lineno++;
 		if (is_comment(buf)) {
 			continue;
 		}
-		
-		if (!(currec = parse_line(buf))) {
-			/* TODO: handle error */
-			continue;
-		}
-
-		for (int i = 0; i < LENGTH(habits); i++) {
-			if (strcmp(currec->task, habits[i].task) == 0) {
-				/* FIXME: ??? */
-				break;
+		if (parse_line(buf, current)) {
+			if (is_too_old(current)) {
+				continue;
 			}
+			
+			if (debug && current->habit == -1) {
+				fprintf(stderr,
+					"WARN: Invalid habit on line #%i\n",
+					lineno);
+			}
+
+			insert_record(current);
+			/* FIXME: replace this with calloc too */
+			current = malloc(sizeof(struct record));
+		} else {
+			fprintf(stderr, "ERR: Invalid line (#%i)\n", lineno);
+		}
+	}
+
+	/* FIXME: check for file errors */
+	free(buf);
+	return 0;
+/* ??? */
+	/*
+fail:
+	return 1;
+	*/
+}
+
+void print_date(struct tm *date)
+{
+	/* TODO: print a given struct tm in the ISO format (%F, or %Y-%m-%d) */
+	char buf[BUFSIZE];
+	strftime(buf, BUFSIZE, "%F", date);
+	printf(buf);
+}
+
+void print_habit(int habit)
+{
+	/* TODO: print a chart of this habit's record */
+}
+
+void print_log(void)
+{
+	print_date(&_today);
+	putc('\n', stdout);
+
+	/* TODO: print heat map */
+
+	/* TODO: print habits */
+}
+
+int split_log_line(char *line, char *fields[3])
+{
+	char* tmp = NULL;
+
+	fields[0] = strtok_r(line, "\t", &tmp);
+	for (int i = 1; i < 3; i++) {
+		if (!(fields[i] = strtok_r(NULL, "\t", &tmp))) {
+			/* Not enough fields. */
+			return 1;
 		}
 	}
 
@@ -142,12 +206,30 @@ int main(int argc, char** argv)
 {
 	// FILE* habitfile = fopen("habitfile.test", "r");
 	//FILE* logfile;
-	FILE *logfile = fopen("habitfile.test", "r");
+	//FILE *logfile = fopen("habitfile.test", "r");
+	FILE *logfile = fopen("test/sim.test", "r");
+
+	/* FIXME: handle args */
+	if (argc > 1) {
+		printf("No arguments implemented for %s...\n", argv[0]);
+		printf("Assuming you want to debug stuff.\n");
+
+		debug = 1;
+	}
 
 	/* init */
-	init_today();
+	init_tm();
+
+	if (debug) {
+		/* FIXME: put this somewhere more reasonable */
+		char buf[BUFSIZE];
+		strftime(buf, BUFSIZE, "%F", &_today);
+		fprintf(stderr, "today is %s\n", buf);
+		strftime(buf, BUFSIZE, "%F", &_cutoff);
+		fprintf(stderr, "ignoring entries made before %s\n", buf);
+	}
+	parse_log(logfile);
 	print_log();
-	read_log(logfile);
 
 	return EXIT_FAILURE;
 }
