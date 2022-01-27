@@ -172,7 +172,7 @@ fail:
 
 void print_date(struct tm *date)
 {
-	/* TODO: print a given struct tm in the ISO format (%F, or %Y-%m-%d) */
+	/* print a given struct tm in the ISO format (%F, or %Y-%m-%d) */
 	char buf[BUFSIZE];
 	strftime(buf, BUFSIZE, "%F", date);
 	printf(buf);
@@ -182,6 +182,7 @@ void print_habit(int habit)
 {
 	/* print a chart of this habit's record */
 	struct tm current_day = _cutoff;
+	struct record *current_record;
 
 	printf("%s", habits[habit].task);
 	for (int i = strlen(habits[habit].task); i <= tabstop; i++) {
@@ -189,7 +190,37 @@ void print_habit(int habit)
 	}
 
 	while (mktime(&current_day) < mktime(&_today)) {
-		putchar('x');
+		/* search records */
+		current_record = records[habit];
+		while (current_record &&
+				mktime(&current_record->date)
+					!= mktime(&current_day)) {
+			current_record = current_record->next;
+		}
+
+		if (current_record) {
+			switch (current_record->complete) {
+				case 'y':
+					printf("%s", yes[0]);
+					break;
+				case 's':
+					printf("%s", skip[0]);
+					break;
+				default:
+					switch (current_record->valid) {
+						case 1:
+							printf("%s", yes[1]);
+							break;
+						case -1:
+							printf("%s", skip[1]);
+							break;
+						default:
+							putchar(' ');
+					}
+			}
+		} else {
+			putchar('?');
+		}
 		current_day.tm_mday++;
 	}
 	putchar('\n');
@@ -252,7 +283,7 @@ int is_overdue(struct tm* ys_date, struct tm* n_date, int freq)
 	/* returns 0 if n_date is within freq days of ys_date
 	 * 1 if it's more than freq days */
 	struct tm due_by = *ys_date;
-	due_by.tm_mday += freq;
+	due_by.tm_mday += freq - 1;
 	return (mktime(&due_by) < mktime(n_date));
 }
 
