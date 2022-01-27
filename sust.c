@@ -8,68 +8,63 @@
 #include <time.h>
 
 #define BUFSIZE 255
-#define LENGTH(X) (sizeof (X) / sizeof (X[0]))
+#define LENGTH(X) (int)(sizeof (X) / sizeof (X[0]))
 
 struct habit {
 	int freq;
 	char *task;
 };
 
-struct record {
-	struct tm date;
-	int habit;
-	char complete; /* y, n, or s */
-	int valid; /* task can be considered "completed" (i.e., was done today
-		      or within the last frequency cycle)
-		     0 = invalid, 1 = valid, -1 = skipped */
-	struct record *next;
-};
-
+int get_longest_freq(void);
 void init_tm(void);
 int is_comment(const char *line);
 int split_log_line(char *line, char *fields[3]);
-void validate_habit(int habit);
-void validate_habits(void);
 
 /* user settings */
 #include "config.h"
+#define MAXDAYS (MONTHS + 1) * 31
 
 /* global variables */
 /* see time.h(0p) for info on struct tm */
-struct tm _today = {0}; /* today's date */
-struct tm _cutoff = {0}; /* ignore entries older than this */
-struct record* records[LENGTH(habits)] = {0};
-/* Would this be better as a trinary(?) bitmap for each day? Hm. */
+struct tm datetoday = {0}; /* today's date */
+struct tm datecutoff = {0}; /* ignore entries older than this */
+struct tm datevisible = {0}; /* start of visible entries */
+char habitlog[LENGTH(habits)][MAXDAYS]; /* FIXME: SCREAM */
 int debug = 0;
+
+int find_habit(char *habit)
+{
+	for (int i = 0; i < LENGTH(habits); i++) {
+		if (strcmp(habit, habits[i].task) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
 
 void init_tm(void)
 {
+	/* set global "broken time" structs to midnight of appropriate date */
+	/* set datetoday to current local time */
 	time_t now = time(NULL);
-	localtime_r(&now, &_today);
+	localtime_r(&now, &datetoday);
+	datetoday.tm_sec = 0;
+	datetoday.tm_min = 0;
+	datetoday.tm_hour = 0;
 
 	/* set cutoff to first of the farthest month in the past */
-	_cutoff.tm_mon = _today.tm_mon;
-	_cutoff.tm_year = _today.tm_year;
-	_cutoff.tm_mday = 1;
-	_cutoff.tm_mon -= (months - 1);
-	/* normalise (month 0 = december last year) */
-	mktime(&_cutoff);
-}
+	datecutoff.tm_mon = datetoday.tm_mon;
+	datecutoff.tm_year = datetoday.tm_year;
+	datecutoff.tm_mday = 1;
+	datecutoff.tm_mon -= MONTHS;
 
-void insert_record(struct record *new)
-{
-	struct record *found;
-	new->next = NULL;
+	datevisible = datecutoff;
+	datevisible.tm_mon++;
 
-	if (!records[new->habit]) {
-		records[new->habit] = new;
-	} else {
-		found = records[new->habit];
-		while (found->next != NULL) {
-			found = found->next;
-		}
-		found->next = new;
-	}
+	/* Fix broken fields (see mktime(3)) */
+	mktime(&datetoday);
+	mktime(&datecutoff);
+	mktime(&datevisible);
 }
 
 int is_comment(const char *line)
@@ -78,84 +73,84 @@ int is_comment(const char *line)
 	return (!line || line[0] == '#' || strcspn(line, "\n") == 0 );
 }
 
-int is_too_old(struct record *record)
+int is_same_date(struct tm *x, struct tm *y)
 {
-	if (debug) {
-		fprintf(stderr, "%i %i %i %i %i %i %i %i ",
-				record->date.tm_sec,
-				record->date.tm_min,
-				record->date.tm_hour,
-				record->date.tm_mon,
-				record->date.tm_year,
-				record->date.tm_wday,
-				record->date.tm_yday,
-				record->date.tm_isdst);
-		fprintf(stderr, "Cutoff: %li record: %li\n",
-				mktime(&_cutoff), mktime(&record->date));
-	}
-	return (mktime(&_cutoff) > mktime(&record->date));
+	return (mktime(x) == mktime(y));
 }
 
-struct record *parse_line(char *line, struct record *out)
+int is_too_old(struct tm *date)
+{
+	return (mktime(&datecutoff) > mktime(date));
+}
+
+int insert_habitlog_entry(char *habit, struct tm *date, char complete)
+{
+	int hindex, lindex = 0;
+	struct tm current = datecutoff;
+
+	if ((hindex = find_habit(habit)) == -1) {
+		/* invalid habit */
+		return 1;
+	}
+
+	while (!is_same_date(&current, date)) {
+		lindex++;
+		current.tm_mday++;
+	}
+
+	if (lindex >= MAXDAYS) {
+		/* day is definitely in the future */
+		printf("hi");
+		return 1;
+	}
+
+	habitlog[hindex][lindex] = complete;
+	return 0;
+}
+
+int parse_line(char *line)
 {
 	char *fields[3];
+	struct tm date = {0};
 
-	split_log_line(line, fields);
-	/* strptime doesn't initialise struct tm */
-	out->date = _cutoff;
-	if (!strptime(fields[0], "%F", &out->date)) {
+	if (split_log_line(line, fields)) {
 		goto fail;
 	}
 
-	out->habit = -1;
-	for (long unsigned int i = 0; i < LENGTH(habits); i++) {
-		/* iterate through habits */
-		if (strcmp(habits[i].task, fields[1]) == 0) {
-			out->habit = i;
-			break;
-		}
-	}
-
-	out->complete = fields[2][0];
-	if (out->complete != 'y' && out->complete != 'n'
-			&& out->complete != 's') {
+	if (!strptime(fields[0], "%F", &date)) {
 		goto fail;
 	}
 
-	return out;
+	if (is_too_old(&date)) {
+		/* old and irrelevant */
+		return 0;
+	}
+
+	/* FIXME: insert an entry in the 
+	 * approriate index of habitlog[habit]. */
+	/* that is, the number of days after datecutoff, 
+	 * meaning that entries on datecutoff are index 0. */
+	if (insert_habitlog_entry(fields[1], &date, fields[2][0])) {
+		goto fail;
+	};
+
+	return 0;
 fail:
-	/* something was malformed/this isn't a valid line */
-	return NULL;
+	/* Line was invalid */
+	return 1;
 }
 
 int parse_log(FILE *log)
 {
-	/* initialize records array */
 	char *buf = malloc(sizeof(char) * BUFSIZE);
 	int lineno = 0;
-	struct record *current = malloc(sizeof(struct record));
 
 	while (fgets(buf, BUFSIZE, log) && !feof(log)) {
 		/* parse */
 		lineno++;
 		if (is_comment(buf)) {
 			continue;
-		}
-		if (parse_line(buf, current)) {
-			if (is_too_old(current)) {
-				continue;
-			}
-			
-			if (debug && current->habit == -1) {
-				fprintf(stderr,
-					"WARN: Invalid habit on line #%i\n",
-					lineno);
-			}
-
-			insert_record(current);
-			/* FIXME: replace this with calloc too */
-			current = malloc(sizeof(struct record));
-		} else {
+		} else if (parse_line(buf)) {
 			fprintf(stderr, "ERR: Invalid line (#%i)\n", lineno);
 		}
 	}
@@ -181,79 +176,76 @@ void print_date(struct tm *date)
 void print_habit(int habit)
 {
 	/* print a chart of this habit's record */
-	struct tm current_day = _cutoff;
-	struct record *current_record;
+	int index = 0;
+	char compstat = 'n';
+	const char* toprint;
+	struct tm currentdate = datecutoff;
+	struct tm due = {0};
 
 	printf("%s", habits[habit].task);
 	for (int i = strlen(habits[habit].task); i <= tabstop; i++) {
 		putchar(' ');
 	}
 
-	while (mktime(&current_day) < mktime(&_today)) {
-		/* search records */
-		current_record = records[habit];
-		while (current_record &&
-				mktime(&current_record->date)
-					!= mktime(&current_day)) {
-			current_record = current_record->next;
-		}
+	/*
+	for (int i = 0; i < MAXDAYS; i++)
+		printf("%c", habitlog[habit][i]);
+		*/
 
-		if (current_record) {
-			switch (current_record->complete) {
-				case 'y':
-					printf("%s", yes[0]);
-					break;
-				case 's':
-					printf("%s", skip[0]);
-					break;
-				default:
-					switch (current_record->valid) {
-						case 1:
-							printf("%s", yes[1]);
-							break;
-						case -1:
-							printf("%s", skip[1]);
-							break;
-						default:
-							putchar(' ');
+	while (mktime(&currentdate) <= mktime(&datetoday)) {
+		/* FIXME: lotsa complex logic here */
+		switch (habitlog[habit][index]) {
+			case 'y':
+				toprint = yes[0];
+				compstat = 'y';
+				due = currentdate;
+				due.tm_mday += habits[habit].freq;
+				break;
+			case 's':
+				toprint = skip[0];
+				compstat = 'n';
+				due = currentdate;
+				due.tm_mday += habits[habit].freq;
+				break;
+			case 'n':
+				if (mktime(&currentdate) < mktime(&due)) {
+					if (compstat == 'y') {
+						toprint = yes[1];
+					} else {
+						toprint = skip[1];
 					}
-			}
-		} else {
-			putchar('?');
+				} else {
+					toprint = " ";
+				}
+				break;
+			default:
+				/* Entry is missing */
+				toprint = "?";
 		}
-		current_day.tm_mday++;
+		if (mktime(&currentdate) >= mktime(&datevisible)) {
+			printf("%s", toprint);
+		}
+		currentdate.tm_mday++;
+		index++;
 	}
-	putchar('\n');
-}
 
-void test_valid(void)
-{
-	struct record *current;
-	for (unsigned long i = 0; i < LENGTH(habits); i++) {
-		current = records[i];
-		while (current) {
-			printf("%s record on ", habits[i].task);
-			print_date(&current->date);
-			printf(" has validity %i\n", current->valid);
-			current = current->next;
-		}
-	}
+	putchar('\n');
 }
 
 void print_heat(void)
 {
 	/* TODO: print the appropriate ramp[] character as according
-	 * to the percentage of tasks that were "valid" on this day. */
-	validate_habits();
-	/* TODO: write test code for validate_habits */
-	if (debug) {
-		test_valid();
-	}
+	 * to the percentage of tasks that were not overdue on this day. */
+	char habitvalid[LENGTH(habits)] = {0};
+	struct tm habitdue[LENGTH(habits)] = {0};
+	struct tm currentdate = datecutoff;
+	int index = 0;
+	//const float rampthreshold = 1.0/LENGTH(ramp);
 }
 
 void print_log(void)
 {
-	print_date(&_today);
+	print_date(&datetoday);
 	putc('\n', stdout);
 
 	print_heat();
@@ -287,53 +279,13 @@ int is_overdue(struct tm* ys_date, struct tm* n_date, int freq)
 	return (mktime(&due_by) < mktime(n_date));
 }
 
-void validate_habit(int habit)
-{
-	/* set each record's "valid" member appropriately based on the
-	 * last time "y" or "s" was set and habits[habit].freq. */
-	/* TODO: TEST THIS HOT MESS */
-	struct record* current = records[habit];
-	struct record* last_ys = NULL;
-
-	while (current) {
-		switch (current->complete) {
-			case 'y':
-				current->valid = 1;
-				last_ys = current;
-				break;
-			case 's':
-				current->valid = -1;
-				last_ys = current;
-				break;
-			case 'n':
-			default:
-				if (last_ys && !is_overdue(&last_ys->date,
-							&current->date,
-							habits[habit].freq)) {
-					current->valid = last_ys->valid;
-				} else {
-					current->valid = 0;
-				}
-				break;
-
-		}
-		current = current->next;
-	}
-}
-
-void validate_habits(void)
-{
-	for (unsigned long i = 0; i < LENGTH(habits); i++) {
-		validate_habit(i);
-	}
-}
-
 int main(int argc, char** argv)
 {
 	// FILE* habitfile = fopen("habitfile.test", "r");
 	//FILE* logfile;
 	//FILE *logfile = fopen("habitfile.test", "r");
 	FILE *logfile = fopen("test/sim.test", "r");
+	//FILE *logfile = fopen("test/habitfile.test", "r");
 
 	/* FIXME: handle args */
 	if (argc > 1) {
@@ -349,9 +301,9 @@ int main(int argc, char** argv)
 	if (debug) {
 		/* FIXME: put this somewhere more reasonable */
 		char buf[BUFSIZE];
-		strftime(buf, BUFSIZE, "%F", &_today);
+		strftime(buf, BUFSIZE, "%F", &datetoday);
 		fprintf(stderr, "today is %s\n", buf);
-		strftime(buf, BUFSIZE, "%F", &_cutoff);
+		strftime(buf, BUFSIZE, "%F", &datecutoff);
 		fprintf(stderr, "ignoring entries made before %s\n", buf);
 	}
 	parse_log(logfile);
