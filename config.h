@@ -3,7 +3,7 @@
 //static const char* logpath = "habitlog.test";
 static const struct habit habits[] = {
 	/* frequency, habit */
-	{ 10, "foo" },
+	{ 2, "foo" },
 	{ 3, "bar"},
 	{ 4, "baz"},
 };
@@ -29,4 +29,4 @@ static const struct habit habits[] = {
 /* max no. of months to display */
 static const int months = 2;
 /* how much space to reserve for tasks */
-//static const int tabstop = 16;
+static const int tabstop = 16;

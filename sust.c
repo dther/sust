@@ -19,12 +19,17 @@ struct record {
 	struct tm date;
 	int habit;
 	char complete; /* y, n, or s */
+	int valid; /* task can be considered "completed" (i.e., was done today
+		      or within the last frequency cycle)
+		     0 = invalid, 1 = valid, -1 = skipped */
 	struct record *next;
 };
 
 void init_tm(void);
 int is_comment(const char *line);
 int split_log_line(char *line, char *fields[3]);
+void validate_habit(int habit);
+void validate_habits(void);
 
 /* user settings */
 #include "config.h"
@@ -34,6 +39,7 @@ int split_log_line(char *line, char *fields[3]);
 struct tm _today = {0}; /* today's date */
 struct tm _cutoff = {0}; /* ignore entries older than this */
 struct record* records[LENGTH(habits)] = {0};
+/* Would this be better as a trinary(?) bitmap for each day? Hm. */
 int debug = 0;
 
 void init_tm(void)
@@ -174,7 +180,44 @@ void print_date(struct tm *date)
 
 void print_habit(int habit)
 {
-	/* TODO: print a chart of this habit's record */
+	/* print a chart of this habit's record */
+	struct tm current_day = _cutoff;
+
+	printf("%s", habits[habit].task);
+	for (int i = strlen(habits[habit].task); i <= tabstop; i++) {
+		putchar(' ');
+	}
+
+	while (mktime(&current_day) < mktime(&_today)) {
+		putchar('x');
+		current_day.tm_mday++;
+	}
+	putchar('\n');
+}
+
+void test_valid(void)
+{
+	struct record *current;
+	for (unsigned long i = 0; i < LENGTH(habits); i++) {
+		current = records[i];
+		while (current) {
+			printf("%s record on ", habits[i].task);
+			print_date(&current->date);
+			printf(" has validity %i\n", current->valid);
+			current = current->next;
+		}
+	}
+}
+
+void print_heat(void)
+{
+	/* TODO: print the appropriate ramp[] character as according
+	 * to the percentage of tasks that were "valid" on this day. */
+	validate_habits();
+	/* TODO: write test code for validate_habits */
+	if (debug) {
+		test_valid();
+	}
 }
 
 void print_log(void)
@@ -182,9 +225,11 @@ void print_log(void)
 	print_date(&_today);
 	putc('\n', stdout);
 
-	/* TODO: print heat map */
+	print_heat();
 
-	/* TODO: print habits */
+	for (unsigned long i = 0; i < LENGTH(habits); i++) {
+		print_habit(i);
+	}
 }
 
 int split_log_line(char *line, char *fields[3])
@@ -200,6 +245,56 @@ int split_log_line(char *line, char *fields[3])
 	}
 
 	return 0;
+}
+
+int is_overdue(struct tm* ys_date, struct tm* n_date, int freq)
+{
+	/* returns 0 if n_date is within freq days of ys_date
+	 * 1 if it's more than freq days */
+	struct tm due_by = *ys_date;
+	due_by.tm_mday += freq;
+	return (mktime(&due_by) < mktime(n_date));
+}
+
+void validate_habit(int habit)
+{
+	/* set each record's "valid" member appropriately based on the
+	 * last time "y" or "s" was set and habits[habit].freq. */
+	/* TODO: TEST THIS HOT MESS */
+	struct record* current = records[habit];
+	struct record* last_ys = NULL;
+
+	while (current) {
+		switch (current->complete) {
+			case 'y':
+				current->valid = 1;
+				last_ys = current;
+				break;
+			case 's':
+				current->valid = -1;
+				last_ys = current;
+				break;
+			case 'n':
+			default:
+				if (last_ys && !is_overdue(&last_ys->date,
+							&current->date,
+							habits[habit].freq)) {
+					current->valid = last_ys->valid;
+				} else {
+					current->valid = 0;
+				}
+				break;
+
+		}
+		current = current->next;
+	}
+}
+
+void validate_habits(void)
+{
+	for (unsigned long i = 0; i < LENGTH(habits); i++) {
+		validate_habit(i);
+	}
 }
 
 int main(int argc, char** argv)
