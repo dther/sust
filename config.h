@@ -17,11 +17,11 @@ static const struct habit habits[] = {
 //static const char* ramp[] = {"0", "1", "2", "3", "4", "5"};
 
 /* "This task has been completed/was completed recently" */
-//static const char* done[] = {"X", "-"};
+static const char* yes[] = {"X", "-"};
 /* "This task was skipped/is being held off for the moment" */
-//static const char* skip[] = {"O", "_"};
+static const char* skip[] = {"O", "_"};
 /* "This is the last day this task can be done before becoming overdue" */
-//static const char* alert = "!";
+static const char* alert = "!";
 
 /* Max columns, task names may be truncated to fit */
 /* 0 = no max */
