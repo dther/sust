@@ -9,6 +9,7 @@
 
 #define BUFSIZE 255
 #define LENGTH(X) (int)(sizeof (X) / sizeof (X[0]))
+#define USAGE "USAGE:\n\tsust [command]\nCommands:\n\tnone, right now.\n"
 
 struct habit {
 	int freq;
@@ -376,9 +377,11 @@ int main(int argc, char** argv)
 			fprintf(stderr, "ERR: Unimplemented.\n");
 			break;
 		case C_UNDEF:
+			fprintf(stderr, "Invalid usage.\n");
+			fprintf(stderr, USAGE);
+			break;
 		case C_HELP:
-			/* FIXME: write usage info */
-			fprintf(stderr, "Help should go here.\n");
+			fprintf(stderr, USAGE);
 	}
 
 	return EXIT_FAILURE;
