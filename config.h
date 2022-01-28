@@ -1,5 +1,8 @@
 /* Configuration header file for sust */
 
+/* max no. of months to display. One extra month is recorded but hidden,
+ * in order to provide context. */
+#define MONTHS 2
 //static const char* logpath = "habitlog.test";
 static const struct habit habits[] = {
 	/* frequency, habit */
@@ -7,6 +10,8 @@ static const struct habit habits[] = {
 	{ 3, "bar"},
 	{ 4, "baz"},
 };
+/* How many days ago to ask for new records, if they don't exist. */
+static const int askdays = 7;
 
 /* AESTHETIC SETTINGS */
 
@@ -30,9 +35,6 @@ static const char* skip[] = {"o", "."};
 
 /* Max columns, task names may be truncated to fit */
 //static const int columns = 80;
-/* max no. of months to display. One extra month is recorded but hidden,
- * in order to provide context. */
-#define MONTHS 2
 /* how much space to reserve for tasks.
  * pro tip: set this to longest habit + 1 */
 static const int tabstop = 16;
