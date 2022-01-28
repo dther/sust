@@ -126,7 +126,7 @@ int parse_line(char *line)
 		return 0;
 	}
 
-	/* FIXME: insert an entry in the 
+	/* insert an entry in the 
 	 * approriate index of habitlog[habit]. */
 	/* that is, the number of days after datecutoff, 
 	 * meaning that entries on datecutoff are index 0. */
@@ -155,7 +155,7 @@ int parse_log(FILE *log)
 		}
 	}
 
-	/* FIXME: check for file errors */
+	/* TODO: check for file errors */
 	free(buf);
 	return 0;
 /* ??? */
@@ -186,11 +186,6 @@ void print_habit(int habit)
 	for (int i = strlen(habits[habit].task); i <= tabstop; i++) {
 		putchar(' ');
 	}
-
-	/*
-	for (int i = 0; i < MAXDAYS; i++)
-		printf("%c", habitlog[habit][i]);
-		*/
 
 	while (mktime(&currentdate) <= mktime(&datetoday)) {
 		/* FIXME: lotsa complex logic here */
@@ -232,15 +227,60 @@ void print_habit(int habit)
 	putchar('\n');
 }
 
+void print_ramp(int heat)
+{
+	const float rampthresh = 1.0/LENGTH(ramp);
+	const char* toprint = ramp[0];
+	float heatfrac = (heat * 1.0)/LENGTH(habits);
+
+	for (int i = 0; i < LENGTH(ramp); i++) {
+		toprint = ramp[i];
+		if ((rampthresh * i) >= heatfrac) {
+			break;
+		}
+	}
+
+	printf("%s", toprint);
+}
+
 void print_heat(void)
 {
 	/* TODO: print the appropriate ramp[] character as according
 	 * to the percentage of tasks that were not overdue on this day. */
-	char habitvalid[LENGTH(habits)] = {0};
 	struct tm habitdue[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
-	int index = 0;
-	//const float rampthreshold = 1.0/LENGTH(ramp);
+	int dindex = 0;
+	int heat;
+
+	for (int i = 0; i <= tabstop; i++)
+		putchar(' ');
+	
+	while (mktime(&currentdate) <= mktime(&datetoday)) {
+		heat = 0;
+		for (int i = 0; i < LENGTH(habits); i++) {
+			switch (habitlog[i][dindex]) {
+				case 'y':
+				case 's':
+					heat++;
+					habitdue[i] = currentdate;
+					habitdue[i].tm_mday += habits[i].freq;
+					break;
+				case 'n':
+				default:
+					if (mktime(&currentdate)
+						< mktime(&habitdue[i])) {
+						heat++;
+					}
+			}
+		}
+
+		if (mktime(&currentdate) >= mktime(&datevisible)) {
+			print_ramp(heat);
+		}
+		currentdate.tm_mday++;
+		dindex++;
+	}
+	putchar('\n');
 }
 
 void print_log(void)
@@ -287,7 +327,7 @@ int main(int argc, char** argv)
 	FILE *logfile = fopen("test/sim.test", "r");
 	//FILE *logfile = fopen("test/habitfile.test", "r");
 
-	/* FIXME: handle args */
+	/* TODO: handle args */
 	if (argc > 1) {
 		printf("No arguments implemented for %s...\n", argv[0]);
 		printf("Assuming you want to debug stuff.\n");

@@ -19,7 +19,7 @@ static const struct habit habits[] = {
  * _.,-='"~
  * .-+*#@
  * UTF-8 or ANSI escape sequences can also be used. */
-//static const char* ramp[] = {"0", "1", "2", "3", "4", "5"};
+static const char* ramp[] = {".", "o", "O"};
 
 /* "This task has been completed/was completed recently" */
 static const char* yes[] = {"x", "-"};
