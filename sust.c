@@ -26,6 +26,13 @@ enum COMMAND {
 	C_TODO
 };
 
+enum STATUS {
+	S_UNDEF = 0,
+	S_Y = 'y',
+	S_N = 'n',
+	S_S = 's',
+};
+
 void init_tm(void);
 int parse_log(FILE* log);
 void print_date(struct tm *date);
@@ -44,8 +51,23 @@ int split_log_line(char *line, char *fields[3]);
 struct tm datetoday = {0}; /* today's date */
 struct tm datecutoff = {0}; /* ignore entries older than this */
 struct tm datevisible = {0}; /* start of visible entries */
-char habitlog[LENGTH(habits)][MAXDAYS];
+enum STATUS habitlog[LENGTH(habits)][MAXDAYS];
 int debug = 0; /* Increases verbosity. Probably going to be removed. */
+
+void ask_entries(int index)
+{
+	/* TODO: ask for entries on each habit that isn't accounted for */
+}
+
+int is_missing_entries(int index)
+{
+	for (int i = 0; i < LENGTH(habits); i++) {
+		if (!habitlog[i][index]) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 void ask_tasks(void)
 {
@@ -53,20 +75,23 @@ void ask_tasks(void)
 	 * in the past (askdays) days, ask about their completion. */
 	struct tm startask = datetoday;
 	struct tm tmp = {0};
-	int logi;
+	int logstart;
 
 	startask.tm_mday -= askdays - 1;
 	tmp = startask;
-	logi = find_log_index(&startask);
-	
-	/* TODO: actually ask */
-	printf("%s", "Asking about the following days:\n");
+	logstart = find_log_index(&startask);
+
 	for (int i = 0; i < askdays; i++) {
 		mktime(&tmp);
-		print_date(&tmp);
-		putchar('\n');
+		if (is_missing_entries(logstart + i)) {
+			print_date(&tmp);
+			printf("%s", ":\n");
+			ask_entries(logstart + i);
+		}
 		tmp.tm_mday++;
 	}
+
+	/* TODO: write these to the habitlog file */
 }
 
 int find_habit(char *habit)
@@ -289,7 +314,7 @@ void print_ramp(int heat)
 
 void print_heat(void)
 {
-	/* TODO: print the appropriate ramp[] character as according
+	/* print the appropriate ramp[] character as according
 	 * to the percentage of tasks that were not overdue on this day. */
 	struct tm habitdue[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
@@ -401,8 +426,8 @@ int main(int argc, char** argv)
 
 	switch (cmd) {
 		case C_ASK:
-			/* Should ask for task status, then... */
 			ask_tasks();
+			/* fallthrough */
 		case C_LOG:
 			print_log();
 			exit(EXIT_SUCCESS);
@@ -413,8 +438,7 @@ int main(int argc, char** argv)
 			break;
 		case C_UNDEF:
 			fprintf(stderr, "Invalid usage.\n");
-			fprintf(stderr, USAGE);
-			break;
+			/* fallthrough */
 		case C_HELP:
 			fprintf(stderr, USAGE);
 	}
