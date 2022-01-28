@@ -30,7 +30,9 @@ void init_tm(void);
 int parse_log(FILE* log);
 void print_date(struct tm *date);
 int find_habit(char *habit);
+int find_log_index(struct tm *date);
 int is_comment(const char *line);
+int is_same_date(struct tm *x, struct tm *y);
 int split_log_line(char *line, char *fields[3]);
 
 /* user settings */
@@ -49,16 +51,13 @@ void ask_tasks(void)
 {
 	/* If there are missing habitlog entries
 	 * in the past (askdays) days, ask about their completion. */
-	int dindex = 0;
-	struct tm tmp = datecutoff;
 	struct tm startask = datetoday;
-	startask.tm_mday -= askdays - 1;
+	struct tm tmp = {0};
+	int logi;
 
-	/* Find which index... */
-	while (mktime(&tmp) < mktime(&startask)) {
-		dindex++;
-		tmp.tm_mday++;
-	}
+	startask.tm_mday -= askdays - 1;
+	tmp = startask;
+	logi = find_log_index(&startask);
 	
 	/* TODO: actually ask */
 	printf("%s", "Asking about the following days:\n");
@@ -78,6 +77,23 @@ int find_habit(char *habit)
 		}
 	}
 	return -1;
+}
+
+int find_log_index(struct tm *date)
+{
+	struct tm tmp = datecutoff;
+	int out = 0;
+
+	while (!is_same_date(date, &tmp)) {
+		out++;
+		tmp.tm_mday++;
+		if (out >= MAXDAYS) {
+			/* failed to find */
+			return -1;
+		}
+	}
+
+	return out;
 }
 
 void init_tm(void)
@@ -124,23 +140,13 @@ int is_too_old(struct tm *date)
 int insert_habitlog_entry(char *habit, struct tm *date, char complete)
 {
 	int hindex, lindex = 0;
-	struct tm current = datecutoff;
 
 	if ((hindex = find_habit(habit)) == -1) {
 		/* invalid habit */
 		return 1;
 	}
 
-	while (!is_same_date(&current, date)) {
-		lindex++;
-		current.tm_mday++;
-	}
-
-	if (lindex >= MAXDAYS) {
-		/* day is definitely in the future */
-		printf("hi");
-		return 1;
-	}
+	lindex = find_log_index(date);
 
 	habitlog[hindex][lindex] = complete;
 	return 0;
