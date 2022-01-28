@@ -15,8 +15,18 @@ struct habit {
 	char *task;
 };
 
-int get_longest_freq(void);
+enum COMMAND {
+	C_UNDEF,
+	C_LOG,
+	C_EDIT,
+	C_EDITH,
+	C_ASK,
+	C_HELP,
+	C_TODO
+};
+
 void init_tm(void);
+int find_habit(char *habit);
 int is_comment(const char *line);
 int split_log_line(char *line, char *fields[3]);
 
@@ -29,8 +39,8 @@ int split_log_line(char *line, char *fields[3]);
 struct tm datetoday = {0}; /* today's date */
 struct tm datecutoff = {0}; /* ignore entries older than this */
 struct tm datevisible = {0}; /* start of visible entries */
-char habitlog[LENGTH(habits)][MAXDAYS]; /* FIXME: SCREAM */
-int debug = 0;
+char habitlog[LENGTH(habits)][MAXDAYS];
+int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
 int find_habit(char *habit)
 {
@@ -321,33 +331,55 @@ int is_overdue(struct tm* ys_date, struct tm* n_date, int freq)
 
 int main(int argc, char** argv)
 {
+	enum COMMAND cmd = C_ASK;
+	char* cmdarg;
 	// FILE* habitfile = fopen("habitfile.test", "r");
 	//FILE* logfile;
 	//FILE *logfile = fopen("habitfile.test", "r");
 	FILE *logfile = fopen("test/sim.test", "r");
 	//FILE *logfile = fopen("test/habitfile.test", "r");
 
-	/* TODO: handle args */
+	/* TODO: implement help and version -h -v using getopt(3) */
+	/* TODO: more intelligent subcommand finding */
 	if (argc > 1) {
-		printf("No arguments implemented for %s...\n", argv[0]);
-		printf("Assuming you want to debug stuff.\n");
-
-		debug = 1;
+		cmdarg = argv[1];
+		if (strcmp(cmdarg, "log") == 0) {
+			cmd = C_LOG;
+		} else if (strcmp(cmdarg, "help") == 0) {
+			cmd = C_HELP;
+		} else if (strcmp(cmdarg, "ask") == 0) {
+			cmd = C_ASK;
+		} else if (strcmp(cmdarg, "todo") == 0) {
+			cmd = C_TODO;
+		} else if (strcmp(cmdarg, "edit") == 0) {
+			cmd = C_EDIT;
+		} else if (strcmp(cmdarg, "edith") == 0) {
+			cmd = C_EDITH;
+		} else {
+			cmd = C_UNDEF;
+		}
 	}
 
 	/* init */
 	init_tm();
-
-	if (debug) {
-		/* FIXME: put this somewhere more reasonable */
-		char buf[BUFSIZE];
-		strftime(buf, BUFSIZE, "%F", &datetoday);
-		fprintf(stderr, "today is %s\n", buf);
-		strftime(buf, BUFSIZE, "%F", &datecutoff);
-		fprintf(stderr, "ignoring entries made before %s\n", buf);
-	}
 	parse_log(logfile);
-	print_log();
+
+	switch (cmd) {
+		case C_ASK:
+			/* Should ask for task status, then... */
+		case C_LOG:
+			print_log();
+			exit(EXIT_SUCCESS);
+		case C_TODO:
+		case C_EDIT:
+		case C_EDITH:
+			fprintf(stderr, "ERR: Unimplemented.\n");
+			break;
+		case C_UNDEF:
+		case C_HELP:
+			/* FIXME: write usage info */
+			fprintf(stderr, "Help should go here.\n");
+	}
 
 	return EXIT_FAILURE;
 }
