@@ -27,6 +27,8 @@ enum COMMAND {
 };
 
 void init_tm(void);
+int parse_log(FILE* log);
+void print_date(struct tm *date);
 int find_habit(char *habit);
 int is_comment(const char *line);
 int split_log_line(char *line, char *fields[3]);
@@ -42,6 +44,31 @@ struct tm datecutoff = {0}; /* ignore entries older than this */
 struct tm datevisible = {0}; /* start of visible entries */
 char habitlog[LENGTH(habits)][MAXDAYS];
 int debug = 0; /* Increases verbosity. Probably going to be removed. */
+
+void ask_tasks(void)
+{
+	/* If there are missing habitlog entries
+	 * in the past (askdays) days, ask about their completion. */
+	int dindex = 0;
+	struct tm tmp = datecutoff;
+	struct tm startask = datetoday;
+	startask.tm_mday -= askdays - 1;
+
+	/* Find which index... */
+	while (mktime(&tmp) < mktime(&startask)) {
+		dindex++;
+		tmp.tm_mday++;
+	}
+	
+	/* TODO: actually ask */
+	printf("%s", "Asking about the following days:\n");
+	for (int i = 0; i < askdays; i++) {
+		mktime(&tmp);
+		print_date(&tmp);
+		putchar('\n');
+		tmp.tm_mday++;
+	}
+}
 
 int find_habit(char *habit)
 {
@@ -364,10 +391,12 @@ int main(int argc, char** argv)
 	/* init */
 	init_tm();
 	parse_log(logfile);
+	fclose(logfile);
 
 	switch (cmd) {
 		case C_ASK:
 			/* Should ask for task status, then... */
+			ask_tasks();
 		case C_LOG:
 			print_log();
 			exit(EXIT_SUCCESS);
