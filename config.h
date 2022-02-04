@@ -18,7 +18,8 @@ static const int askdays = 7;
 /* "ramp" is used for the heatmap, going from low to high.
  * A multibyte sequence can be used,
  * but will be considered one character
- * for the purposes of column calculation. */
+ * for the purposes of column calculation.
+ * Looks best if there's one character for each habit. */
 /* Example ramps:
  * .oO0Oo.
  * _.,-='"~
