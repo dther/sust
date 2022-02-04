@@ -6,10 +6,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #define BUFSIZE 255
 #define LENGTH(X) (int)(sizeof (X) / sizeof (X[0]))
-#define USAGE "USAGE:\n\tsust [command]\nCommands:\n\tnone, right now.\n"
+#define USAGE \
+"usage: sust [COMMAND]\ncommands:\n log\n edit \n edith\n ask\n help\n todo\n"
 
 struct habit {
 	int freq;
@@ -36,6 +38,7 @@ enum STATUS {
 void init_tm(void);
 int parse_log(FILE* log);
 void print_date(struct tm *date);
+void print_habit(int index);
 int find_habit(char *habit);
 int find_log_index(struct tm *date);
 int is_comment(const char *line);
@@ -56,7 +59,27 @@ int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
 void ask_entries(int index)
 {
-	/* TODO: ask for entries on each habit that isn't accounted for */
+	char buf[BUFSIZE];
+	/* ask for entries on each habit that isn't accounted for */
+	for (int i = 0; i < LENGTH(habits); i++) {
+		if (habitlog[i][index] == S_UNDEF) {
+			print_habit(i);
+			printf("%s", " [y/n/s/C]? ");
+			fgets(buf, BUFSIZE, stdin);
+			buf[0] = tolower(buf[0]);
+			switch (buf[0]) {
+				case S_Y:
+				case S_N:
+				case S_S:
+					habitlog[i][index] = buf[0];
+					break;
+				default:
+					printf("%s\n", "No entry added.");
+					break;
+			}
+		}
+	}
+	/* TODO: communicate what to print...? */
 }
 
 int is_missing_entries(int index)
