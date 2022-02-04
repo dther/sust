@@ -3,7 +3,7 @@
 /* max no. of months to display. One extra month is recorded but hidden,
  * in order to provide context. */
 #define MONTHS 2
-//static const char* logpath = "habitlog.test";
+static const char* logpath = "test/sim.test";
 static const struct habit habits[] = {
 	/* frequency, habit */
 	{ 2, "foo" },

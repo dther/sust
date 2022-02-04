@@ -57,29 +57,39 @@ struct tm datevisible = {0}; /* start of visible entries */
 enum STATUS habitlog[LENGTH(habits)][MAXDAYS];
 int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
-void ask_entries(int index)
+void add_to_log(int index, struct tm* date, enum STATUS entry, FILE *logfile)
 {
-	char buf[BUFSIZE];
+	/* TODO: Update habitlog and print entries to file */
+}
+
+void ask_entries(int index, struct tm *date, FILE *logfile)
+{
+	char sel, buf[BUFSIZE];
 	/* ask for entries on each habit that isn't accounted for */
 	for (int i = 0; i < LENGTH(habits); i++) {
-		if (habitlog[i][index] == S_UNDEF) {
-			print_habit(i);
-			printf("%s", " [y/n/s/C]? ");
-			fgets(buf, BUFSIZE, stdin);
-			buf[0] = tolower(buf[0]);
-			switch (buf[0]) {
-				case S_Y:
-				case S_N:
-				case S_S:
-					habitlog[i][index] = buf[0];
-					break;
-				default:
-					printf("%s\n", "No entry added.");
-					break;
-			}
+		if (habitlog[i][index] != S_UNDEF) {
+			continue;
+		}
+		print_habit(i);
+		printf("%s", " [y/n/s/C]? ");
+		fgets(buf, BUFSIZE, stdin);
+		sel = tolower(buf[0]);
+		switch (sel) {
+			case S_Y:
+			case S_N:
+			case S_S:
+				/*
+				add_to_log(index, date, sel, FILE* logfile);
+						*/
+				habitlog[i][index] = sel;
+				break;
+			default:
+				printf("%s\n", "No entry added.");
+				break;
 		}
 	}
-	/* TODO: communicate what to print...? */
+
+	/* TODO: print entries to file */
 }
 
 int is_missing_entries(int index)
@@ -99,22 +109,32 @@ void ask_tasks(void)
 	struct tm startask = datetoday;
 	struct tm tmp = {0};
 	int logstart;
+	FILE* logfile = fopen(logpath, "a");
+
+	if (!logfile) {
+		fprintf(stderr, "%s%s%s\n",
+			"ERR: Failed to open ", logpath, "for appending.");
+		goto fail;
+	}
 
 	startask.tm_mday -= askdays - 1;
 	tmp = startask;
-	logstart = find_log_index(&startask);
+	if ((logstart = find_log_index(&startask)) == -1) {
+		goto fail;
+	}
 
 	for (int i = 0; i < askdays; i++) {
 		mktime(&tmp);
 		if (is_missing_entries(logstart + i)) {
 			print_date(&tmp);
 			printf("%s", ":\n");
-			ask_entries(logstart + i);
+			ask_entries(logstart + i, &tmp, logfile);
 		}
 		tmp.tm_mday++;
 	}
 
-	/* TODO: write these to the habitlog file */
+fail:
+	fclose(logfile);
 }
 
 int find_habit(char *habit)
@@ -137,6 +157,8 @@ int find_log_index(struct tm *date)
 		tmp.tm_mday++;
 		if (out >= MAXDAYS) {
 			/* failed to find */
+			fprintf(stderr, "%s\n",
+"ERR: Internal log math error! Is askdays set to a number less than 1?");
 			return -1;
 		}
 	}
@@ -415,11 +437,7 @@ int main(int argc, char** argv)
 {
 	enum COMMAND cmd = C_ASK;
 	char* cmdarg;
-	// FILE* habitfile = fopen("habitfile.test", "r");
-	//FILE* logfile;
-	//FILE *logfile = fopen("habitfile.test", "r");
-	FILE *logfile = fopen("test/sim.test", "r");
-	//FILE *logfile = fopen("test/habitfile.test", "r");
+	FILE *logfile = fopen(logpath, "r");
 
 	/* TODO: implement help and version -h -v using getopt(3) */
 	/* TODO: more intelligent subcommand finding */
