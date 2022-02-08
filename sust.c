@@ -344,7 +344,13 @@ void print_habit(int habit)
 				break;
 			default:
 				/* Entry is missing */
-				toprint = "?";
+				/* if this is the due date,
+				 * print alert symbol */
+				if (is_same_date(&currentdate, &due)) {
+					toprint = alert;
+				} else {
+					toprint = "?";
+				}
 		}
 		if (mktime(&currentdate) >= mktime(&datevisible)) {
 			printf("%s", toprint);
@@ -353,6 +359,11 @@ void print_habit(int habit)
 		index++;
 	}
 
+	/* At the end of the log,
+	 * print alert if the date today is a due date */
+	if (is_same_date(&due, &datetoday)) {
+		printf(" %s", alert);
+	}
 	putchar('\n');
 }
 
