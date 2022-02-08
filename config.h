@@ -32,7 +32,9 @@ static const char* yes[] = {"x", "-"};
 /* "This task was skipped/is being held off for the moment" */
 static const char* skip[] = {"o", "."};
 /* "This is the last day this task can be done before becoming overdue" */
-//static const char* alert = "!";
+static const char* alert = "!";
+/* Completion status is unknown */
+static const char* unknown = "_";
 
 /* Max columns, task names may be truncated to fit */
 //static const int columns = 80;

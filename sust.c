@@ -349,7 +349,7 @@ void print_habit(int habit)
 				if (is_same_date(&currentdate, &due)) {
 					toprint = alert;
 				} else {
-					toprint = "?";
+					toprint = unknown;
 				}
 		}
 		if (mktime(&currentdate) >= mktime(&datevisible)) {
