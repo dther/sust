@@ -60,7 +60,7 @@ int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
 void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
 {
-	/* TODO: Print habit log entry to file */
+	/* Print habit log entry to file */
 	static int firstprint = 1;
 
 	if (firstprint) {
@@ -72,7 +72,7 @@ void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
 	}
 
 	fprint_date(logfile, date);
-	fprintf(logfile, "\tUNIMPLEMENTED\ts\n");
+	fprintf(logfile, "\t%s\t%c\n", habits[habit].task, entry);
 }
 
 void ask_entries(int index, struct tm *date, FILE *logfile)
