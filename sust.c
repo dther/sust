@@ -363,7 +363,7 @@ void print_habit(int habit)
 
 	/* At the end of the log,
 	 * print alert if the date today is a due date */
-	if (is_same_date(&due, &datetoday)) {
+	if (habits[habit].freq > 0 && is_same_date(&due, &datetoday)) {
 		printf(" %s", alert);
 	}
 	putchar('\n');
@@ -389,6 +389,7 @@ void print_heat(void)
 {
 	/* print the appropriate ramp[] character as according
 	 * to the percentage of tasks that were not overdue on this day. */
+	/* FIXME: disinclude habits with frequency 0 */
 	struct tm habitdue[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
 	int dindex = 0;
