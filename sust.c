@@ -488,6 +488,10 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if (!logfile) {
+		fprintf(stderr, "No logfile detected! Please create it.\n");
+		return EXIT_FAILURE;
+	}
 	/* init */
 	init_tm();
 	parse_log(logfile);
