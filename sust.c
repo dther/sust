@@ -57,9 +57,18 @@ struct tm datevisible = {0}; /* start of visible entries */
 enum STATUS habitlog[LENGTH(habits)][MAXDAYS];
 int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
-void add_to_log(int index, struct tm* date, enum STATUS entry, FILE *logfile)
+void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
 {
-	/* TODO: Update habitlog and print entries to file */
+	/* TODO: Print habit log entry to file */
+	static int firstprint = 1;
+
+	if (firstprint) {
+		/* Print a newline for our batch of new habits.
+		 * habitctl does this to make manual inspections
+		 * of the logfile easier. */
+		firstprint = 0;
+		fprintf(logfile, "\n");
+	}
 }
 
 void ask_entries(int index, struct tm *date, FILE *logfile)
@@ -78,9 +87,7 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 			case S_Y:
 			case S_N:
 			case S_S:
-				/*
-				add_to_log(index, date, sel, FILE* logfile);
-						*/
+				print_to_log(date, i, sel, logfile);
 				habitlog[i][index] = sel;
 				break;
 			default:
@@ -88,8 +95,6 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 				break;
 		}
 	}
-
-	/* TODO: print entries to file */
 }
 
 int is_missing_entries(int index)
