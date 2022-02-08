@@ -369,11 +369,27 @@ void print_habit(int habit)
 	putchar('\n');
 }
 
+int total_non_optional_habits(void) {
+	/* Returns the number of habits which are non-optional
+	 * (i.e. freq > 0) */
+	static int total = 0;
+	if (total > 0) {
+		return total;
+	}
+
+	for (int i = 0; i < LENGTH(habits); i++) {
+		if (habits[i].freq > 0) {
+			total++;
+		}
+	}
+	return total;
+}
+
 void print_ramp(int heat)
 {
 	const float rampthresh = 1.0/LENGTH(ramp);
 	const char* toprint = ramp[0];
-	float heatfrac = (heat * 1.0)/LENGTH(habits);
+	float heatfrac = (heat * 1.0)/total_non_optional_habits();
 
 	for (int i = 0; i < LENGTH(ramp); i++) {
 		toprint = ramp[i];
@@ -389,7 +405,7 @@ void print_heat(void)
 {
 	/* print the appropriate ramp[] character as according
 	 * to the percentage of tasks that were not overdue on this day. */
-	/* FIXME: disinclude habits with frequency 0 */
+	/* disincludes habits with frequency 0 */
 	struct tm habitdue[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
 	int dindex = 0;
@@ -401,6 +417,10 @@ void print_heat(void)
 	while (mktime(&currentdate) <= mktime(&datetoday)) {
 		heat = 0;
 		for (int i = 0; i < LENGTH(habits); i++) {
+			if (habits[i].freq < 1) {
+				/* Don't include habits which are optional */
+				continue;
+			}
 			switch (habitlog[i][dindex]) {
 				case 'y':
 				case 's':
