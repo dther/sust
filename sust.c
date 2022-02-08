@@ -36,6 +36,7 @@ enum STATUS {
 };
 
 void init_tm(void);
+void fprint_date(FILE* stream, struct tm *date);
 int parse_log(FILE* log);
 void print_date(struct tm *date);
 void print_habit(int index);
@@ -69,6 +70,9 @@ void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
 		firstprint = 0;
 		fprintf(logfile, "\n");
 	}
+
+	fprint_date(logfile, date);
+	fprintf(logfile, "\tUNIMPLEMENTED\ts\n");
 }
 
 void ask_entries(int index, struct tm *date, FILE *logfile)
@@ -217,8 +221,9 @@ int insert_habitlog_entry(char *habit, struct tm *date, char complete)
 	int hindex, lindex = 0;
 
 	if ((hindex = find_habit(habit)) == -1) {
-		/* invalid habit */
-		return 1;
+		/* ignore invalid habit */
+		/* we might have just removed it from the list */
+		return 0;
 	}
 
 	lindex = find_log_index(date);
@@ -284,12 +289,17 @@ fail:
 	*/
 }
 
-void print_date(struct tm *date)
+void fprint_date(FILE *stream, struct tm *date)
 {
-	/* print a given struct tm in the ISO format (%F, or %Y-%m-%d) */
+	/* print ISO date to a specified stream */
 	char buf[BUFSIZE];
 	strftime(buf, BUFSIZE, "%F", date);
-	printf(buf);
+	fprintf(stream, buf);
+}
+
+void print_date(struct tm *date)
+{
+	fprint_date(stdout, date);
 }
 
 void print_habit(int habit)
