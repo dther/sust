@@ -392,10 +392,10 @@ void print_ramp(int heat)
 	float heatfrac = (heat * 1.0)/total_non_optional_habits();
 
 	for (int i = 0; i < LENGTH(ramp); i++) {
-		toprint = ramp[i];
 		if ((rampthresh * i) >= heatfrac) {
 			break;
 		}
+		toprint = ramp[i];
 	}
 
 	printf("%s", toprint);
