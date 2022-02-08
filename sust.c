@@ -346,7 +346,9 @@ void print_habit(int habit)
 				/* Entry is missing */
 				/* if this is the due date,
 				 * print alert symbol */
-				if (is_same_date(&currentdate, &due)) {
+				if (habits[habit].freq > 0 &&
+						is_same_date(&currentdate,
+							&due)) {
 					toprint = alert;
 				} else {
 					toprint = unknown;
