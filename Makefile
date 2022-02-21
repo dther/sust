@@ -10,6 +10,9 @@ sust: sust.c config.h
 config.h: config.def.h
 	cp $< $@
 
+clean:
+	rm -rf sust
+
 install: sust
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp -f sust $(DESTDIR)$(PREFIX)/bin/sust
