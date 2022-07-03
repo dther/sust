@@ -1,7 +1,7 @@
 /* Configuration header file for sust */
 
 /* max no. of months to display. One extra month is recorded but hidden,
- * in order to provide context. */
+ * in order to provide context for the earliest printed month. */
 #define MONTHS 2
 static const char* logpath = "test/sim.test";
 static const struct habit habits[] = {
@@ -24,7 +24,8 @@ static const int askdays = 7;
  * .oO0Oo.
  * _.,-='"~
  * .-+*#@
- * UTF-8 or ANSI escape sequences can also be used. */
+ * UTF-8 or ANSI escape sequences can also be used,
+ * and will be treated as 1 character. */
 static const char* ramp[] = {".", "o", "O"};
 
 /* "This task has been completed/was completed recently" */
