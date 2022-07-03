@@ -19,14 +19,14 @@ static const int askdays = 7;
  * A multibyte sequence can be used,
  * but will be considered one character
  * for the purposes of column calculation.
- * Looks best if there's one character for each habit. */
+ * Looks best if there's 1 more character than the number of habits. */
 /* Example ramps:
  * .oO0Oo.
  * _.,-='"~
  * .-+*#@
  * UTF-8 or ANSI escape sequences can also be used,
  * and will be treated as 1 character. */
-static const char* ramp[] = {".", "o", "O"};
+static const char* ramp[] = {".", "o", "O", "@"};
 
 /* "This task has been completed/was completed recently" */
 static const char* yes[] = {"x", "-"};
