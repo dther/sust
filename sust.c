@@ -50,12 +50,17 @@ int split_log_line(char *line, char *fields[3]);
 #include "config.h"
 #define MAXDAYS (MONTHS + 1) * 31
 
+struct hlog {
+	struct tm due;
+	enum STATUS log[MAXDAYS];
+};
+
 /* global variables */
 /* see time.h(0p) for info on struct tm */
 struct tm datetoday = {0}; /* today's date */
 struct tm datecutoff = {0}; /* ignore entries older than this */
 struct tm datevisible = {0}; /* start of visible entries */
-enum STATUS habitlog[LENGTH(habits)][MAXDAYS];
+struct hlog hlogs[LENGTH(habits)];
 int debug = 0; /* Increases verbosity. Probably going to be removed. */
 
 void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
@@ -81,7 +86,7 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 	int i;
 	/* ask for entries on each habit that isn't accounted for */
 	for (i = 0; i < LENGTH(habits); i++) {
-		if (habitlog[i][index] != S_UNDEF) {
+		if (hlogs[i].log[index] != S_UNDEF) {
 			continue;
 		}
 		print_habit(i);
@@ -93,7 +98,7 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 			case S_N:
 			case S_S:
 				print_to_log(date, i, sel, logfile);
-				habitlog[i][index] = sel;
+				hlogs[i].log[index] = sel;
 				break;
 			default:
 				printf("%s\n", "No entry added.");
@@ -106,7 +111,7 @@ int is_missing_entries(int index)
 {
 	int i;
 	for (i = 0; i < LENGTH(habits); i++) {
-		if (!habitlog[i][index]) {
+		if (!hlogs[i].log[index]) {
 			return 1;
 		}
 	}
@@ -231,7 +236,7 @@ int insert_habitlog_entry(char *habit, struct tm *date, char complete)
 
 	lindex = find_log_index(date);
 
-	habitlog[hindex][lindex] = complete;
+	hlogs[hindex].log[lindex] = complete;
 	return 0;
 }
 
@@ -321,7 +326,7 @@ void print_habit(int habit)
 
 	while (mktime(&currentdate) <= mktime(&datetoday)) {
 		/* FIXME: lotsa complex logic here */
-		switch (habitlog[habit][index]) {
+		switch (hlogs[habit].log[index]) {
 			case 'y':
 				toprint = yes[0];
 				compstat = 'y';
@@ -426,7 +431,7 @@ void print_heat(void)
 				/* Don't include habits which are optional */
 				continue;
 			}
-			switch (habitlog[i][dindex]) {
+			switch (hlogs[i].log[dindex]) {
 				case 'y':
 				case 's':
 					heat++;
