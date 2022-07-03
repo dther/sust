@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 2000809L
 #define _XOPEN_SOURCE
 
+/* test */
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -32,7 +33,7 @@ enum STATUS {
 	S_UNDEF = 0,
 	S_Y = 'y',
 	S_N = 'n',
-	S_S = 's',
+	S_S = 's'
 };
 
 void init_tm(void);
@@ -78,8 +79,9 @@ void print_to_log(struct tm* date, int habit, enum STATUS entry, FILE *logfile)
 void ask_entries(int index, struct tm *date, FILE *logfile)
 {
 	char sel, buf[BUFSIZE];
+	int i;
 	/* ask for entries on each habit that isn't accounted for */
-	for (int i = 0; i < LENGTH(habits); i++) {
+	for (i = 0; i < LENGTH(habits); i++) {
 		if (habitlog[i][index] != S_UNDEF) {
 			continue;
 		}
@@ -103,7 +105,8 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 
 int is_missing_entries(int index)
 {
-	for (int i = 0; i < LENGTH(habits); i++) {
+	int i;
+	for (i = 0; i < LENGTH(habits); i++) {
 		if (!habitlog[i][index]) {
 			return 1;
 		}
@@ -117,7 +120,7 @@ void ask_tasks(void)
 	 * in the past (askdays) days, ask about their completion. */
 	struct tm startask = datetoday;
 	struct tm tmp = {0};
-	int logstart;
+	int logstart, i;
 	FILE* logfile = fopen(logpath, "a");
 
 	if (!logfile) {
@@ -132,7 +135,7 @@ void ask_tasks(void)
 		goto fail;
 	}
 
-	for (int i = 0; i < askdays; i++) {
+	for (i = 0; i < askdays; i++) {
 		mktime(&tmp);
 		if (is_missing_entries(logstart + i)) {
 			print_date(&tmp);
@@ -148,7 +151,8 @@ fail:
 
 int find_habit(char *habit)
 {
-	for (int i = 0; i < LENGTH(habits); i++) {
+	int i;
+	for (i = 0; i < LENGTH(habits); i++) {
 		if (strcmp(habit, habits[i].task) == 0) {
 			return i;
 		}
@@ -293,7 +297,7 @@ void fprint_date(FILE *stream, struct tm *date)
 {
 	/* print ISO date to a specified stream */
 	char buf[BUFSIZE];
-	strftime(buf, BUFSIZE, "%F", date);
+	strftime(buf, BUFSIZE, "%Y-%m-%d", date);
 	fprintf(stream, buf);
 }
 
@@ -305,14 +309,14 @@ void print_date(struct tm *date)
 void print_habit(int habit)
 {
 	/* print a chart of this habit's record */
-	int index = 0;
+	int i, index = 0;
 	char compstat = 'n';
 	const char* toprint;
 	struct tm currentdate = datecutoff;
 	struct tm due = {0};
 
 	printf("%s", habits[habit].task);
-	for (int i = strlen(habits[habit].task); i <= tabstop; i++) {
+	for (i = strlen(habits[habit].task); i <= tabstop; i++) {
 		putchar(' ');
 	}
 
@@ -373,11 +377,12 @@ int total_non_optional_habits(void) {
 	/* Returns the number of habits which are non-optional
 	 * (i.e. freq > 0) */
 	static int total = 0;
+	int i;
 	if (total > 0) {
 		return total;
 	}
 
-	for (int i = 0; i < LENGTH(habits); i++) {
+	for (i = 0; i < LENGTH(habits); i++) {
 		if (habits[i].freq > 0) {
 			total++;
 		}
@@ -390,8 +395,9 @@ void print_ramp(int heat)
 	const float rampthresh = 1.0/LENGTH(ramp);
 	const char* toprint = ramp[0];
 	float heatfrac = (heat * 1.0)/total_non_optional_habits();
+	int i;
 
-	for (int i = 0; i < LENGTH(ramp); i++) {
+	for (i = 0; i < LENGTH(ramp); i++) {
 		if ((rampthresh * i) >= heatfrac) {
 			break;
 		}
@@ -409,14 +415,14 @@ void print_heat(void)
 	struct tm habitdue[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
 	int dindex = 0;
-	int heat;
+	int heat, i;
 
-	for (int i = 0; i <= tabstop; i++)
+	for (i = 0; i <= tabstop; i++)
 		putchar(' ');
 	
 	while (mktime(&currentdate) <= mktime(&datetoday)) {
 		heat = 0;
-		for (int i = 0; i < LENGTH(habits); i++) {
+		for (i = 0; i < LENGTH(habits); i++) {
 			if (habits[i].freq < 1) {
 				/* Don't include habits which are optional */
 				continue;
@@ -448,22 +454,24 @@ void print_heat(void)
 
 void print_log(void)
 {
+	int i;
 	print_date(&datetoday);
 	putc('\n', stdout);
 
 	print_heat();
 
-	for (unsigned long i = 0; i < LENGTH(habits); i++) {
+	for (i = 0; i < LENGTH(habits); i++) {
 		print_habit(i);
 	}
 }
 
 int split_log_line(char *line, char *fields[3])
 {
+	int i;
 	char* tmp = NULL;
 
 	fields[0] = strtok_r(line, "\t", &tmp);
-	for (int i = 1; i < 3; i++) {
+	for (i = 1; i < 3; i++) {
 		if (!(fields[i] = strtok_r(NULL, "\t", &tmp))) {
 			/* Not enough fields. */
 			return 1;

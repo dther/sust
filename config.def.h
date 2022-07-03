@@ -38,7 +38,7 @@ static const char* alert = "!";
 static const char* unknown = "_";
 
 /* Max columns, task names may be truncated to fit */
-//static const int columns = 80;
+/* static const int columns = 80; */
 /* how much space to reserve for tasks.
  * pro tip: set this to longest habit + 1 */
 static const int tabstop = 16;

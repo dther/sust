@@ -1,5 +1,5 @@
-#CCFLAGS=-Wall -Wextra -pedantic -std=gnu89
-CCFLAGS=-Wall -Wextra -pedantic -std=gnu11 -g
+CCFLAGS=-Wall -Wextra -pedantic -std=gnu89
+#CCFLAGS=-Wall -Wextra -pedantic -std=gnu11 -g
 PREFIX=/usr/local/
 
 all: sust
@@ -7,8 +7,8 @@ all: sust
 sust: sust.c config.h
 	gcc $(CCFLAGS) $< -o $@
 
-config.h: config.def.h
-	cp $< $@
+config.h:
+	cp config.def.h $@
 
 clean:
 	rm -rf sust
