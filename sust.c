@@ -1,7 +1,6 @@
-#define _POSIX_C_SOURCE 2000809L
-#define _XOPEN_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 700
 
-/* test */
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
