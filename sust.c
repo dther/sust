@@ -120,7 +120,7 @@ int is_missing_entries(int index)
 
 void ask_tasks(void)
 {
-	/* If there are missing habitlog entries
+	/* If there are missing hlog entries
 	 * in the past (askdays) days, ask about their completion. */
 	struct tm startask = datetoday;
 	struct tm tmp = {0};
@@ -188,6 +188,7 @@ void init_tm(void)
 	/* set global "broken time" structs to midnight of appropriate date */
 	/* set datetoday to current local time */
 	time_t now = time(NULL);
+
 	localtime_r(&now, &datetoday);
 	datetoday.tm_sec = 0;
 	datetoday.tm_min = 0;
@@ -199,6 +200,7 @@ void init_tm(void)
 	datecutoff.tm_mday = 1;
 	datecutoff.tm_mon -= MONTHS;
 
+	/* Don't display the oldest month, it's only there for context. */
 	datevisible = datecutoff;
 	datevisible.tm_mon++;
 
@@ -224,19 +226,37 @@ int is_too_old(struct tm *date)
 	return (mktime(&datecutoff) > mktime(date));
 }
 
-int insert_habitlog_entry(char *habit, struct tm *date, char complete)
+int insert_hlog_entry(char *habit, struct tm *date, char complete)
 {
-	int hindex, lindex = 0;
+	int hi, li = 0;
+	enum STATUS status;
 
-	if ((hindex = find_habit(habit)) == -1) {
+	if ((hi = find_habit(habit)) == -1) {
 		/* ignore invalid habit */
 		/* we might have just removed it from the list */
 		return 0;
 	}
 
-	lindex = find_log_index(date);
+	if ((li = find_log_index(date)) < 0) {
+		/* Math error. Constant in config.h may be set wrongly. */
+		return 1;
+	}
 
-	hlogs[hindex].log[lindex] = complete;
+	status = tolower(complete);
+	switch (status) {
+		case S_Y:
+		case S_S:
+			hlogs[hi].due = *date;
+			hlogs[hi].due.tm_mday += habits[hi].freq;
+			/* fallthrough */
+		case S_N:
+			hlogs[hi].log[li] = status;
+			break;
+		default:
+			/* Invalid entry character. */
+			return -1;
+	}
+
 	return 0;
 }
 
@@ -259,10 +279,10 @@ int parse_line(char *line)
 	}
 
 	/* insert an entry in the 
-	 * approriate index of habitlog[habit]. */
+	 * approriate index of hlog[habit]. */
 	/* that is, the number of days after datecutoff, 
 	 * meaning that entries on datecutoff are index 0. */
-	if (insert_habitlog_entry(fields[1], &date, fields[2][0])) {
+	if (insert_hlog_entry(fields[1], &date, fields[2][0])) {
 		goto fail;
 	};
 
