@@ -436,7 +436,7 @@ void print_heat(void)
 	/* print the appropriate ramp[] character as according
 	 * to the percentage of tasks that were not overdue on this day. */
 	/* disincludes habits with frequency 0 */
-	struct tm habitdue[LENGTH(habits)] = {0};
+	struct tm satisfied[LENGTH(habits)] = {0};
 	struct tm currentdate = datecutoff;
 	int dindex = 0;
 	int heat, i;
@@ -455,13 +455,13 @@ void print_heat(void)
 				case 'y':
 				case 's':
 					heat++;
-					habitdue[i] = currentdate;
-					habitdue[i].tm_mday += habits[i].freq;
+					satisfied[i] = currentdate;
+					satisfied[i].tm_mday += habits[i].freq;
 					break;
 				case 'n':
 				default:
 					if (mktime(&currentdate)
-						< mktime(&habitdue[i])) {
+						< mktime(&satisfied[i])) {
 						heat++;
 					}
 			}
