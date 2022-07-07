@@ -337,7 +337,7 @@ void print_habit(int habit)
 	char compstat = 'n';
 	const char* toprint;
 	struct tm currentdate = datecutoff;
-	struct tm due = {0};
+	struct tm satisfied = {0};
 
 	printf("%s", habits[habit].task);
 	for (i = strlen(habits[habit].task); i <= tabstop; i++) {
@@ -350,17 +350,18 @@ void print_habit(int habit)
 			case 'y':
 				toprint = yes[0];
 				compstat = 'y';
-				due = currentdate;
-				due.tm_mday += habits[habit].freq;
+				satisfied = currentdate;
+				satisfied.tm_mday += habits[habit].freq;
 				break;
 			case 's':
 				toprint = skip[0];
 				compstat = 'n';
-				due = currentdate;
-				due.tm_mday += habits[habit].freq;
+				satisfied = currentdate;
+				satisfied.tm_mday += habits[habit].freq;
 				break;
 			case 'n':
-				if (mktime(&currentdate) < mktime(&due)) {
+				if (mktime(&currentdate) <
+						mktime(&satisfied)) {
 					if (compstat == 'y') {
 						toprint = yes[1];
 					} else {
@@ -372,15 +373,7 @@ void print_habit(int habit)
 				break;
 			default:
 				/* Entry is missing */
-				/* if this is the due date,
-				 * print alert symbol */
-				if (habits[habit].freq > 0 &&
-						is_same_date(&currentdate,
-							&due)) {
-					toprint = alert;
-				} else {
-					toprint = unknown;
-				}
+				toprint = unknown;
 		}
 		if (mktime(&currentdate) >= mktime(&datevisible)) {
 			printf("%s", toprint);
@@ -390,8 +383,9 @@ void print_habit(int habit)
 	}
 
 	/* At the end of the log,
-	 * print alert if the date today is a due date */
-	if (habits[habit].freq > 0 && is_same_date(&due, &datetoday)) {
+	 * print alert if this object is overdue*/
+	if (habits[habit].freq > 0 &&
+			mktime(&datetoday) > mktime(&hlogs[habit].due)) {
 		printf(" %s", alert);
 	}
 	putchar('\n');
