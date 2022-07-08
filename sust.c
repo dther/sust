@@ -499,15 +499,6 @@ int split_log_line(char *line, char *fields[3])
 	return 0;
 }
 
-int is_overdue(struct tm* ys_date, struct tm* n_date, int freq)
-{
-	/* returns 0 if n_date is within freq days of ys_date
-	 * 1 if it's more than freq days */
-	struct tm due_by = *ys_date;
-	due_by.tm_mday += freq - 1;
-	return (mktime(&due_by) < mktime(n_date));
-}
-
 int main(int argc, char** argv)
 {
 	enum COMMAND cmd = C_ASK;
