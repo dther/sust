@@ -40,10 +40,12 @@ void fprint_date(FILE* stream, struct tm *date);
 int parse_log(FILE* log);
 void print_date(struct tm *date);
 void print_habit(int index);
+void print_todo(void);
 int find_habit(char *habit);
 int find_log_index(struct tm *date);
 int is_comment(const char *line);
 int is_same_date(struct tm *x, struct tm *y);
+int insert_hlog_entry(char *task, struct tm *date, char complete);
 int split_log_line(char *line, char *fields[3]);
 
 /* user settings */
@@ -98,7 +100,7 @@ void ask_entries(int index, struct tm *date, FILE *logfile)
 			case S_N:
 			case S_S:
 				print_to_log(date, i, sel, logfile);
-				hlogs[i].log[index] = sel;
+				insert_hlog_entry(habits[i].task, date, sel);
 				break;
 			default:
 				printf("%s\n", "No entry added.");
@@ -385,7 +387,7 @@ void print_habit(int habit)
 	/* At the end of the log,
 	 * print alert if this object is overdue*/
 	if (habits[habit].freq > 0 &&
-			mktime(&datetoday) > mktime(&hlogs[habit].due)) {
+			mktime(&datetoday) >= mktime(&hlogs[habit].due)) {
 		printf(" %s", alert);
 	}
 	putchar('\n');
@@ -483,6 +485,16 @@ void print_log(void)
 	}
 }
 
+void print_todo(void)
+{
+	int i;
+	for (i = 0; i < LENGTH(hlogs); i++) {
+		if (mktime(&datetoday) >= mktime(&hlogs[i].due)) {
+			printf("%s\n", habits[i].task);
+		}
+	}
+}
+
 int split_log_line(char *line, char *fields[3])
 {
 	int i;
@@ -543,6 +555,8 @@ int main(int argc, char** argv)
 			print_log();
 			exit(EXIT_SUCCESS);
 		case C_TODO:
+			print_todo();
+			exit(EXIT_SUCCESS);
 		case C_EDIT:
 		case C_EDITH:
 			fprintf(stderr, "ERR: Unimplemented.\n");
