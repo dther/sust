@@ -489,7 +489,8 @@ void print_todo(void)
 {
 	int i;
 	for (i = 0; i < LENGTH(hlogs); i++) {
-		if (mktime(&datetoday) >= mktime(&hlogs[i].due)) {
+		if (habits[i].freq > 0 &&
+				mktime(&datetoday) >= mktime(&hlogs[i].due)) {
 			printf("%s\n", habits[i].task);
 		}
 	}
